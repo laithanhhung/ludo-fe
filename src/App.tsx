@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import challengeQuestions from './data/challenge-questions.json'
 
 type PawnLevel = 1 | 2 | 3 | 4
 type TileType = 'normal' | 'chance' | 'challenge'
@@ -48,6 +49,19 @@ type Room = {
   name: string
   players: number
   status: 'waiting' | 'playing'
+}
+
+type ChallengeQuestion = {
+  id: number
+  question: string
+  options: Record<'A' | 'B' | 'C' | 'D', string>
+  answer: 'A' | 'B' | 'C' | 'D'
+}
+
+type ChallengeData = {
+  title: string
+  totalQuestions: number
+  questions: ChallengeQuestion[]
 }
 
 const EVENT_POSITIONS_BY_SECTOR = [2, 5, 8, 11]
@@ -256,6 +270,7 @@ function Dice({ value, rolling }: { value: number; rolling: boolean }) {
 }
 
 function App() {
+  const challengeData = challengeQuestions as ChallengeData
   const [page, setPage] = useState<'room' | 'lobby' | 'game'>('room')
   const [rooms, setRooms] = useState<Room[]>([
     { id: 'R-1001', name: 'Phòng Nhanh 1', players: 1, status: 'waiting' },
@@ -271,6 +286,13 @@ function App() {
   const activePlayer = gameState?.players[gameState.currentPlayerIndex]
 
   const trackPath = useMemo(() => buildTrackPath(), [])
+  const featuredChallenge = useMemo(() => {
+    const questions = challengeData.questions
+    if (questions.length === 0) return null
+    const index = Math.floor(Math.random() * questions.length)
+    return questions[index]
+  }, [challengeData.questions])
+
   const trackMap = useMemo(() => {
     const map = new Map<string, { index: number; type: TileType }>()
     trackPath.forEach((coord, index) => {
@@ -567,6 +589,29 @@ function App() {
                 </div>
               </div>
             ))}
+          </section>
+
+          <section className="mt-5 rounded-xl bg-slate-700/50 p-3 ring-1 ring-white/10">
+            <p className="text-xs uppercase tracking-wide text-slate-300">Challenge Bank</p>
+            <p className="mt-1 text-sm font-semibold">
+              {challengeData.title} ({challengeData.totalQuestions} câu)
+            </p>
+            {featuredChallenge ? (
+              <div className="mt-2 space-y-1 text-xs text-slate-200">
+                <p>
+                  <span className="font-semibold">Câu {featuredChallenge.id}:</span> {featuredChallenge.question}
+                </p>
+                <p>
+                  A. {featuredChallenge.options.A} | B. {featuredChallenge.options.B}
+                </p>
+                <p>
+                  C. {featuredChallenge.options.C} | D. {featuredChallenge.options.D}
+                </p>
+                <p className="text-emerald-300">Đáp án: {featuredChallenge.answer}</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-amber-300">Chưa có câu hỏi challenge.</p>
+            )}
           </section>
         </aside>
 

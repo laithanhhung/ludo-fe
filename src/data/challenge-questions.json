@@ -1,0 +1,490 @@
+{
+  "title": "Challenge - Cach mang cong nghiep, CNH-HDH va hoi nhap",
+  "totalQuestions": 44,
+  "questions": [
+    {
+      "id": 1,
+      "question": "Cach mang cong nghiep la gi?",
+      "options": {
+        "A": "Su thay doi ve chinh tri",
+        "B": "Buoc phat trien nhay vot ve tu lieu lao dong",
+        "C": "Su thay doi van hoa",
+        "D": "Su thay doi giao duc"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 2,
+      "question": "Cach mang cong nghiep lan thu nhat bat dau o dau?",
+      "options": {
+        "A": "My",
+        "B": "Duc",
+        "C": "Anh",
+        "D": "Nhat"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 3,
+      "question": "Cach mang cong nghiep lan 1 dien ra chu yeu trong linh vuc nao?",
+      "options": {
+        "A": "Cong nghe thong tin",
+        "B": "Det vai",
+        "C": "Nong nghiep",
+        "D": "Y te"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 4,
+      "question": "Nang luong chinh cua CM cong nghiep lan 1 la:",
+      "options": {
+        "A": "Dien",
+        "B": "Hoi nuoc",
+        "C": "Hat nhan",
+        "D": "Mat troi"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 5,
+      "question": "CM cong nghiep lan 2 gan voi:",
+      "options": {
+        "A": "May tinh",
+        "B": "Dien va co khi",
+        "C": "AI",
+        "D": "Internet"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 6,
+      "question": "CM cong nghiep lan 3 dac trung boi:",
+      "options": {
+        "A": "Hoi nuoc",
+        "B": "Dien",
+        "C": "Cong nghe thong tin",
+        "D": "Robot"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 7,
+      "question": "CM cong nghiep 4.0 co dac trung la:",
+      "options": {
+        "A": "Co gioi hoa",
+        "B": "Tu dong hoa don gian",
+        "C": "AI, Big Data",
+        "D": "Dien khi hoa"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 8,
+      "question": "CM cong nghiep 4.0 duoc de cap lan dau nam nao?",
+      "options": {
+        "A": "2000",
+        "B": "2011",
+        "C": "1990",
+        "D": "2020"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 9,
+      "question": "Cong nghiep hoa la qua trinh:",
+      "options": {
+        "A": "Phat trien giao duc",
+        "B": "Chuyen tu thu cong sang may moc",
+        "C": "Tang dan so",
+        "D": "Mo rong lanh tho"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 10,
+      "question": "Muc tieu chinh cua cong nghiep hoa la:",
+      "options": {
+        "A": "Tang dan so",
+        "B": "Tang nang suat lao dong",
+        "C": "Tang thue",
+        "D": "Giam san xuat"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 11,
+      "question": "Mo hinh CNH co dien bat dau tu:",
+      "options": {
+        "A": "Cong nghiep nang",
+        "B": "Cong nghiep nhe",
+        "C": "Nong nghiep",
+        "D": "Dich vu"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 12,
+      "question": "Mo hinh CNH Lien Xo uu tien:",
+      "options": {
+        "A": "Nong nghiep",
+        "B": "Cong nghiep nhe",
+        "C": "Cong nghiep nang",
+        "D": "Dich vu"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 13,
+      "question": "CNH o Viet Nam gan voi:",
+      "options": {
+        "A": "Kinh te thi truong dinh huong XHCN",
+        "B": "Tu ban chu nghia",
+        "C": "Dong cua kinh te",
+        "D": "Khong hoi nhap"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 14,
+      "question": "CNH-HDH nham muc tieu:",
+      "options": {
+        "A": "Dan giau, nuoc manh",
+        "B": "Giam dan so",
+        "C": "Tang nhap khau",
+        "D": "Giam cong nghiep"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 15,
+      "question": "CNH gan lien voi:",
+      "options": {
+        "A": "Kinh te tri thuc",
+        "B": "Kinh te tu cung",
+        "C": "Kinh te nong nghiep",
+        "D": "Kinh te thu cong"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 16,
+      "question": "Noi dung quan trong dau tien cua CNH la:",
+      "options": {
+        "A": "Tao dieu kien phat trien",
+        "B": "Tang dan so",
+        "C": "Giam lao dong",
+        "D": "Dong cua thi truong"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 17,
+      "question": "CNH-HDH can day manh:",
+      "options": {
+        "A": "Cong nghe lac hau",
+        "B": "Khoa hoc cong nghe",
+        "C": "Lao dong thu cong",
+        "D": "Nong nghiep truyen thong"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 18,
+      "question": "Chuyen dich co cau kinh te theo huong:",
+      "options": {
+        "A": "Lac hau",
+        "B": "Hien dai",
+        "C": "Dong kin",
+        "D": "Thu cong"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 19,
+      "question": "CNH can hoan thien:",
+      "options": {
+        "A": "Quan he san xuat",
+        "B": "Dan so",
+        "C": "Dia ly",
+        "D": "Van hoa"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 20,
+      "question": "CNH phai thich ung voi:",
+      "options": {
+        "A": "CM 1.0",
+        "B": "CM 2.0",
+        "C": "CM 4.0",
+        "D": "CM 3.0"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 21,
+      "question": "Hoi nhap kinh te quoc te la:",
+      "options": {
+        "A": "Dong cua kinh te",
+        "B": "Gan ket kinh te quoc gia voi the gioi",
+        "C": "Tach biet kinh te",
+        "D": "Chi xuat khau"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 22,
+      "question": "Hoi nhap xuat phat tu:",
+      "options": {
+        "A": "Toan cau hoa",
+        "B": "Chien tranh",
+        "C": "Dan so",
+        "D": "Van hoa"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 23,
+      "question": "Hoi nhap giup:",
+      "options": {
+        "A": "Giam viec lam",
+        "B": "Thu hut von",
+        "C": "Dong cua thi truong",
+        "D": "Giam san xuat"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 24,
+      "question": "Hoi nhap tao dieu kien:",
+      "options": {
+        "A": "Mo rong thi truong",
+        "B": "Thu hep thi truong",
+        "C": "Giam canh tranh",
+        "D": "Giam phat trien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 25,
+      "question": "Tac dong tich cuc cua hoi nhap la:",
+      "options": {
+        "A": "Tang co hoi viec lam",
+        "B": "Giam thu nhap",
+        "C": "Tang ngheo",
+        "D": "Giam san xuat"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 26,
+      "question": "Hoi nhap gay ra:",
+      "options": {
+        "A": "Khong canh tranh",
+        "B": "Canh tranh gay gat",
+        "C": "Khong thay doi",
+        "D": "Khong rui ro"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 27,
+      "question": "Hoi nhap co the gay:",
+      "options": {
+        "A": "Phu thuoc kinh te",
+        "B": "Doc lap hoan toan",
+        "C": "Khong anh huong",
+        "D": "Tang tu chu tuyet doi"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 28,
+      "question": "Hoi nhap co the dan den:",
+      "options": {
+        "A": "Phan phoi cong bang tuyet doi",
+        "B": "Bat binh dang",
+        "C": "Khong thay doi",
+        "D": "Giam dan so"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 29,
+      "question": "Can nhan thuc hoi nhap la:",
+      "options": {
+        "A": "Xu the khach quan",
+        "B": "Khong can thiet",
+        "C": "Tam thoi",
+        "D": "Ngau nhien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 30,
+      "question": "Hoi nhap can co:",
+      "options": {
+        "A": "Chien luoc ro rang",
+        "B": "Tuy tien",
+        "C": "Khong ke hoach",
+        "D": "Ngau nhien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 31,
+      "question": "Viet Nam can:",
+      "options": {
+        "A": "Tham gia lien ket quoc te",
+        "B": "Tach biet the gioi",
+        "C": "Dong cua",
+        "D": "Giam xuat khau"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 32,
+      "question": "Hoan thien:",
+      "options": {
+        "A": "Phap luat",
+        "B": "Dan so",
+        "C": "Khi hau",
+        "D": "Dia ly"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 33,
+      "question": "Nang cao:",
+      "options": {
+        "A": "Nang luc canh tranh",
+        "B": "Dan so",
+        "C": "Dien tich",
+        "D": "Lanh tho"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 34,
+      "question": "Kinh te doc lap la:",
+      "options": {
+        "A": "Khong phu thuoc",
+        "B": "Phu thuoc",
+        "C": "Dong cua",
+        "D": "Khong phat trien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 35,
+      "question": "Bien phap xay dung kinh te doc lap:",
+      "options": {
+        "A": "CNH-HDH",
+        "B": "Giam san xuat",
+        "C": "Dong cua",
+        "D": "Ngung phat trien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 36,
+      "question": "Hoi nhap can gan voi:",
+      "options": {
+        "A": "Quoc phong",
+        "B": "Giao duc",
+        "C": "Van hoa",
+        "D": "Tat ca"
+      },
+      "answer": "D"
+    },
+    {
+      "id": 37,
+      "question": "CNH-HDH giup:",
+      "options": {
+        "A": "Tang nang suat",
+        "B": "Giam san xuat",
+        "C": "Giam phat trien",
+        "D": "Khong thay doi"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 38,
+      "question": "Hoi nhap giup nang cao:",
+      "options": {
+        "A": "Uy tin quoc gia",
+        "B": "Giam uy tin",
+        "C": "Khong thay doi",
+        "D": "Giam phat trien"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 39,
+      "question": "CNH-HDH can dua vao:",
+      "options": {
+        "A": "Khoa hoc cong nghe",
+        "B": "Lao dong thu cong",
+        "C": "Nong nghiep",
+        "D": "Thu cong"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 40,
+      "question": "Muc tieu cuoi cung cua CNH-HDH la:",
+      "options": {
+        "A": "Phat trien ben vung",
+        "B": "Giam phat trien",
+        "C": "Khong thay doi",
+        "D": "Tang nhap khau"
+      },
+      "answer": "A"
+    },
+    {
+      "id": 41,
+      "question": "Nen kinh te doc lap, tu chu la nen kinh te:",
+      "options": {
+        "A": "Khong giao thuong voi quoc te",
+        "B": "Khong phu thuoc vao cac nuoc khac ve duong loi va chinh sach phat trien",
+        "C": "Tap trung phat trien cong nghiep",
+        "D": "Khong tham gia hoi nhap quoc te"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 42,
+      "question": "Qua trinh cong nghiep hoa theo mo hinh co dien thuong dien ra trong bao lau?",
+      "options": {
+        "A": "10 - 20 nam",
+        "B": "30 - 40 nam",
+        "C": "60 - 80 nam",
+        "D": "100 - 150 nam"
+      },
+      "answer": "C"
+    },
+    {
+      "id": 43,
+      "question": "Cach mang cong nghiep lan thu tu (4.0) duoc de cap lan dau tien tai dau?",
+      "options": {
+        "A": "Hoi cho cong nghe My",
+        "B": "Hoi cho trien lam cong nghe Hannover (Duc)",
+        "C": "Dien dan kinh te the gioi tai Anh",
+        "D": "Ke hoach hanh dong cua Lien Xo"
+      },
+      "answer": "B"
+    },
+    {
+      "id": 44,
+      "question": "Cach mang cong nghiep lan thu nhat bat dau vao thoi gian nao?",
+      "options": {
+        "A": "the ky XVIII",
+        "B": "the ky XXI",
+        "C": "the ky XX",
+        "D": "the ky XIX"
+      },
+      "answer": "A"
+    }
+  ]
+}

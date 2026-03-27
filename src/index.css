@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.dice-face {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff, #dbe3f2);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.7);
+}
+
+.dice-face.rolling {
+  animation: dice-roll 480ms ease-in-out;
+}
+
+.dice-pip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #0f172a;
+  transform: translate(-50%, -50%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+@keyframes dice-roll {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(26deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}

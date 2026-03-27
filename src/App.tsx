@@ -280,9 +280,19 @@ function App() {
     () => new Map(gameState.players.map((player) => [player.id, player.homeBase.level] as const)),
     [gameState.players],
   )
+  const movablePawnIds = useMemo(() => {
+    if (pendingDice === null || !!eventDialog || rollingDice || isAnimatingMove) return new Set<string>()
+    const active = gameState.players[gameState.currentPlayerIndex]
+    return new Set(
+      active.pawns
+        .filter((pawn) => canPawnActWithDice(pawn, pendingDice))
+        .map((pawn) => pawn.id),
+    )
+  }, [pendingDice, eventDialog, rollingDice, isAnimatingMove, gameState.players, gameState.currentPlayerIndex])
 
   const selectedPawnId = selectedPawnByPlayer[activePlayer.id] ?? activePlayer.pawns[0]?.id ?? ''
   const canClickPawnNow = pendingDice !== null && !rollingDice && !eventDialog && !isAnimatingMove
+  const shouldUseMovableHighlight = pendingDice !== null && !rollingDice && !eventDialog && !isAnimatingMove
 
   useEffect(() => {
     if (!snackbar) return
@@ -326,22 +336,34 @@ function App() {
     }
   }
 
-  const getDestinationIndex = (player: Player, pawn: Pawn, dice: number): number => {
+  function getDestinationIndex(player: Player, pawn: Pawn, dice: number): number {
     if (pawn.position === null) return player.startIndex
     return (pawn.position + dice) % trackPath.length
   }
 
-  const hasOwnPawnOnDestination = (player: Player, pawn: Pawn, dice: number): boolean => {
+  function hasOwnPawnOnDestination(player: Player, pawn: Pawn, dice: number): boolean {
     const destinationIndex = getDestinationIndex(player, pawn, dice)
     return player.pawns.some((item) => item.id !== pawn.id && item.position === destinationIndex)
   }
 
-  const canPawnActWithDice = (pawn: Pawn, dice: number | null) => {
+  function hasOwnPawnBlockingPath(player: Player, pawn: Pawn, dice: number): boolean {
+    if (pawn.position === null) return false
+    const currentPos = pawn.position
+    return player.pawns.some((item) => {
+      if (item.id === pawn.id || item.position === null) return false
+      const distanceAhead = (item.position - currentPos + trackPath.length) % trackPath.length
+      if (distanceAhead === 0) return false
+      return distanceAhead < dice
+    })
+  }
+
+  function canPawnActWithDice(pawn: Pawn, dice: number | null) {
     if (!dice) return false
     if (pawn.position === null) {
       if (dice !== 1 && dice !== 6) return false
       return !hasOwnPawnOnDestination(activePlayer, pawn, dice)
     }
+    if (hasOwnPawnBlockingPath(activePlayer, pawn, dice)) return false
     return !hasOwnPawnOnDestination(activePlayer, pawn, dice)
   }
 
@@ -378,6 +400,13 @@ function App() {
     const isDeployMove = pawnToMove.position === null
     const canDeploy = pendingDice === 1 || pendingDice === 6
     if (isDeployMove && !canDeploy) return
+    if (hasOwnPawnBlockingPath(currentPlayer, pawnToMove, pendingDice)) {
+      setSnackbar({
+        message: 'Quan phia truoc dang chan duong di.',
+        tone: 'error',
+      })
+      return
+    }
     if (hasOwnPawnOnDestination(currentPlayer, pawnToMove, pendingDice)) {
       setSnackbar({
         message: 'O dich da co quan cua ban.',
@@ -704,7 +733,13 @@ function App() {
                         src={pawnIconByLevel[pawn.level]}
                         alt={`Level ${pawn.level}`}
                         className={`mr-1 inline h-4 w-4 align-text-bottom transition ${
-                          player.id === activePlayer.id ? 'scale-110' : 'brightness-50 saturate-50'
+                          shouldUseMovableHighlight
+                            ? movablePawnIds.has(pawn.id)
+                              ? 'scale-110'
+                              : 'brightness-50 saturate-50'
+                            : player.id === activePlayer.id
+                              ? 'scale-110'
+                              : 'brightness-50 saturate-50'
                         }`}
                         style={{
                           borderRadius: '4px',
@@ -856,9 +891,13 @@ function App() {
                             src={pawnIdToIcon.get(topPawnId)}
                             alt={topPawnId}
                             className={`h-full w-full object-cover transition hover:scale-[1.02] ${
-                          pawnIdToOwnerColor.get(topPawnId) === activePlayer.color
-                            ? 'scale-[1.03]'
-                            : 'brightness-[0.38] saturate-[0.55]'
+                              shouldUseMovableHighlight
+                                ? movablePawnIds.has(topPawnId)
+                                  ? 'scale-[1.03]'
+                                  : 'brightness-[0.38] saturate-[0.55]'
+                                : pawnIdToOwnerColor.get(topPawnId) === activePlayer.color
+                                  ? 'scale-[1.03]'
+                                  : 'brightness-[0.38] saturate-[0.55]'
                             }`}
                             style={{
                               boxShadow:
@@ -895,7 +934,13 @@ function App() {
                         src={pawnIconByLevel[ownerIdToHomeLevel.get(homePawn.ownerId) ?? homePawn.level]}
                         alt={homePawn.id}
                         className={`h-full w-full object-cover transition hover:scale-[1.02] ${
-                          homePawn.ownerId === activePlayer.id ? 'scale-[1.03]' : 'brightness-[0.38] saturate-[0.55]'
+                          shouldUseMovableHighlight
+                            ? movablePawnIds.has(homePawn.id)
+                              ? 'scale-[1.03]'
+                              : 'brightness-[0.38] saturate-[0.55]'
+                            : homePawn.ownerId === activePlayer.id
+                              ? 'scale-[1.03]'
+                              : 'brightness-[0.38] saturate-[0.55]'
                         }`}
                         style={{
                           boxShadow:

@@ -5,39 +5,71 @@ body {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-.dice-face {
-  position: relative;
-  width: 70px;
-  height: 70px;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #ffffff, #dbe3f2);
-  box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.35),
-    inset 0 2px 3px rgba(255, 255, 255, 0.7);
+.tile-event-chance {
+  animation: tile-chance-glow 900ms ease-in-out infinite alternate;
 }
 
-.dice-face.rolling {
-  animation: dice-roll 480ms ease-in-out;
+.tile-event-challenge {
+  animation: tile-challenge-glow 900ms ease-in-out infinite alternate;
 }
 
-.dice-pip {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: #0f172a;
-  transform: translate(-50%, -50%);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+.tile-chance {
+  background:
+    linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(14, 116, 144, 0.35)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(103, 232, 249, 0.14) 0 4px,
+      rgba(8, 145, 178, 0.12) 4px 8px
+    );
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.55);
 }
 
-@keyframes dice-roll {
+.tile-challenge {
+  background:
+    linear-gradient(135deg, rgba(217, 70, 239, 0.28), rgba(126, 34, 206, 0.38)),
+    repeating-linear-gradient(
+      45deg,
+      rgba(240, 171, 252, 0.14) 0 4px,
+      rgba(192, 132, 252, 0.1) 4px 8px
+    );
+  box-shadow: inset 0 0 0 1px rgba(240, 171, 252, 0.55);
+}
+
+.event-dialog-badge {
+  animation: event-badge-pop 850ms ease-in-out infinite alternate;
+}
+
+@keyframes tile-chance-glow {
   0% {
-    transform: rotate(0deg) scale(1);
-  }
-  50% {
-    transform: rotate(26deg) scale(1.08);
+    box-shadow: inset 0 0 0 rgba(16, 185, 129, 0.2);
+    transform: scale(1);
   }
   100% {
-    transform: rotate(0deg) scale(1);
+    box-shadow:
+      inset 0 0 0 2px rgba(16, 185, 129, 0.9),
+      0 0 16px rgba(16, 185, 129, 0.55);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes tile-challenge-glow {
+  0% {
+    box-shadow: inset 0 0 0 rgba(245, 158, 11, 0.2);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 2px rgba(245, 158, 11, 0.95),
+      0 0 16px rgba(245, 158, 11, 0.6);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes event-badge-pop {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.08);
   }
 }

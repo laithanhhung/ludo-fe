@@ -1,0 +1,122 @@
+.dice-scene {
+  --dice-size: 74px;
+  --half: calc(var(--dice-size) / 2);
+  width: var(--dice-size);
+  height: var(--dice-size);
+  perspective: 600px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dice-cube {
+  position: relative;
+  width: var(--dice-size);
+  height: var(--dice-size);
+  transform-style: preserve-3d;
+  transition: transform 420ms ease-out;
+}
+
+.dice-cube.rolling {
+  animation: dice-cube-roll 520ms ease-in-out;
+}
+
+.dice3d-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff, #dbe3f2);
+  border: 1px solid rgba(200, 212, 229, 0.95);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.3),
+    inset 0 3px 6px rgba(255, 255, 255, 0.75);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.dice3d-face-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+}
+
+.dice3d-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  opacity: 0;
+  background: #0f172a;
+  transform: scale(0.4);
+}
+
+.dice3d-dot.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.dice3d-face.front {
+  transform: rotateY(0deg) translateZ(var(--half));
+}
+
+.dice3d-face.back {
+  transform: rotateY(180deg) translateZ(var(--half));
+}
+
+.dice3d-face.right {
+  transform: rotateY(90deg) translateZ(var(--half));
+}
+
+.dice3d-face.left {
+  transform: rotateY(-90deg) translateZ(var(--half));
+}
+
+.dice3d-face.top {
+  transform: rotateX(90deg) translateZ(var(--half));
+}
+
+.dice3d-face.bottom {
+  transform: rotateX(-90deg) translateZ(var(--half));
+}
+
+.dice-cube.show-1 {
+  transform: rotateX(0deg) rotateY(0deg);
+}
+
+.dice-cube.show-2 {
+  transform: rotateX(0deg) rotateY(-90deg);
+}
+
+.dice-cube.show-3 {
+  transform: rotateX(-90deg) rotateY(0deg);
+}
+
+.dice-cube.show-4 {
+  transform: rotateX(90deg) rotateY(0deg);
+}
+
+.dice-cube.show-5 {
+  transform: rotateX(0deg) rotateY(90deg);
+}
+
+.dice-cube.show-6 {
+  transform: rotateX(0deg) rotateY(180deg);
+}
+
+@keyframes dice-cube-roll {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) scale(1);
+  }
+  40% {
+    transform: rotateX(220deg) rotateY(200deg) scale(1.05);
+  }
+  70% {
+    transform: rotateX(300deg) rotateY(280deg) scale(1.08);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(360deg) scale(1);
+  }
+}

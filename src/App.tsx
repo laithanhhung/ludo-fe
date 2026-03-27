@@ -10,6 +10,7 @@ type Pawn = {
   ownerId: string
   level: PawnLevel
   position: number | null
+  travelSteps: number
   inGoalLaneIndex: number | null
   shieldTurns: number
   isActive: boolean
@@ -72,6 +73,13 @@ type SnackbarState = {
   tone: 'success' | 'error'
 } | null
 
+type MoveTarget = {
+  pawnId: string
+  steps: number
+  destinationIndex: number | null
+  destinationGoalLaneIndex: number | null
+}
+
 const EVENT_POSITIONS_BY_SECTOR = [2, 5, 8, 11]
 const SECTOR_SIZE = 13
 const BOARD_SIZE = 15
@@ -105,6 +113,7 @@ function createInitialState(): GameState {
       ownerId: preset.id,
       level: 1,
       position: null,
+      travelSteps: 0,
       inGoalLaneIndex: null,
       shieldTurns: 0,
       isActive: false,
@@ -201,6 +210,15 @@ function buildTrackPath(): Array<{ row: number; col: number }> {
   ]
 }
 
+function getGoalLaneCoord(playerId: string, laneIndex: number): { row: number; col: number } | null {
+  if (laneIndex < 0 || laneIndex > 5) return null
+  if (playerId === 'P1') return { row: 7, col: 1 + laneIndex }
+  if (playerId === 'P2') return { row: 1 + laneIndex, col: 7 }
+  if (playerId === 'P3') return { row: 7, col: 13 - laneIndex }
+  if (playerId === 'P4') return { row: 13 - laneIndex, col: 7 }
+  return null
+}
+
 function getBaseCellClass(row: number, col: number): string {
   if (row <= 5 && col <= 5) return 'bg-red-950/60'
   if (row <= 5 && col >= 9) return 'bg-blue-950/60'
@@ -231,6 +249,7 @@ function App() {
   )
   const [rollingDice, setRollingDice] = useState(false)
   const [pendingDice, setPendingDice] = useState<number | null>(null)
+  const [pendingMoveTargets, setPendingMoveTargets] = useState<MoveTarget[]>([])
   const [isAnimatingMove, setIsAnimatingMove] = useState(false)
   const [animatedPawnPositions, setAnimatedPawnPositions] = useState<Record<string, number>>({})
   const [highlightedEventTile, setHighlightedEventTile] = useState<number | null>(null)
@@ -311,7 +330,7 @@ function App() {
           window.clearInterval(timer)
           setChallengeSubmitted(true)
           setSnackbar({
-            message: 'Chia buon! Het thoi gian tra loi.',
+            message: 'Chia buồn! Hết thời gian trả lời.',
             tone: 'error',
           })
           setEventDialog(null)
@@ -336,40 +355,95 @@ function App() {
     }
   }
 
-  function getDestinationIndex(player: Player, pawn: Pawn, dice: number): number {
-    if (pawn.position === null) return player.startIndex
-    return (pawn.position + dice) % trackPath.length
+  function getStepOptionsForPawn(pawn: Pawn, dice: number): number[] {
+    if (pawn.position === null) return [dice]
+    return Array.from(new Set([dice, dice * pawn.level])).sort((a, b) => a - b)
   }
 
-  function hasOwnPawnOnDestination(player: Player, pawn: Pawn, dice: number): boolean {
-    const destinationIndex = getDestinationIndex(player, pawn, dice)
-    return player.pawns.some((item) => item.id !== pawn.id && item.position === destinationIndex)
+  function getPawnAtTrackIndex(index: number, excludePawnId?: string): { owner: Player; pawn: Pawn } | null {
+    for (const player of gameState.players) {
+      for (const pawn of player.pawns) {
+        if (pawn.id === excludePawnId) continue
+        if (pawn.position === index) return { owner: player, pawn }
+      }
+    }
+    return null
   }
 
-  function hasOwnPawnBlockingPath(player: Player, pawn: Pawn, dice: number): boolean {
-    if (pawn.position === null) return false
-    const currentPos = pawn.position
-    return player.pawns.some((item) => {
-      if (item.id === pawn.id || item.position === null) return false
-      const distanceAhead = (item.position - currentPos + trackPath.length) % trackPath.length
-      if (distanceAhead === 0) return false
-      return distanceAhead < dice
-    })
+  function evaluateMoveOption(player: Player, pawn: Pawn, steps: number) {
+    if (steps <= 0) return { valid: false as const, reason: 'Số bước không hợp lệ.' }
+    const deployMove = pawn.position === null
+    if (deployMove && pendingDice !== 1 && pendingDice !== 6) {
+      return { valid: false as const, reason: 'Cần xúc xắc 1 hoặc 6 để xuất quân.' }
+    }
+
+    const baseTravel = deployMove ? 0 : pawn.travelSteps
+    const targetTravel = baseTravel + steps
+    if (targetTravel > trackPath.length + 6) {
+      return { valid: false as const, reason: 'Vượt quá đích đến trong lane.' }
+    }
+
+    for (let inc = 1; inc <= steps; inc += 1) {
+      const currentTravel = baseTravel + inc
+      const isDestinationStep = inc === steps
+      const onTrack = currentTravel <= trackPath.length
+      if (onTrack) {
+        const trackIndex = (player.startIndex + currentTravel) % trackPath.length
+        const occupant = getPawnAtTrackIndex(trackIndex, pawn.id)
+        if (!occupant) continue
+        if (!isDestinationStep) {
+          return { valid: false as const, reason: 'Bị chặn bởi quân phía trước.' }
+        }
+        if (occupant.owner.id === player.id) {
+          return { valid: false as const, reason: 'Ô đích đã có quân cùng đội.' }
+        }
+        if (occupant.pawn.shieldTurns > 0) {
+          return { valid: false as const, reason: 'Quân đối thủ đang được bảo hộ.' }
+        }
+        if (pawn.level < occupant.pawn.level) {
+          return { valid: false as const, reason: 'Không đủ cấp để cạnh tranh đào thải.' }
+        }
+      } else {
+        const laneIndex = currentTravel - trackPath.length - 1
+        const occupant = gameState.players
+          .flatMap((item) => item.pawns)
+          .find((item) => item.id !== pawn.id && item.ownerId === player.id && item.inGoalLaneIndex === laneIndex)
+        if (occupant) {
+          return { valid: false as const, reason: 'Lane đích đã có quân của bạn.' }
+        }
+      }
+    }
+
+    const destinationOnTrack = targetTravel <= trackPath.length
+    if (destinationOnTrack) {
+      const destinationIndex = (player.startIndex + targetTravel) % trackPath.length
+      return {
+        valid: true as const,
+        steps,
+        destinationIndex,
+        destinationGoalLaneIndex: null as number | null,
+        targetTravel,
+      }
+    }
+
+    return {
+      valid: true as const,
+      steps,
+      destinationIndex: null as number | null,
+      destinationGoalLaneIndex: targetTravel - trackPath.length - 1,
+      targetTravel,
+    }
   }
 
   function canPawnActWithDice(pawn: Pawn, dice: number | null) {
     if (!dice) return false
-    if (pawn.position === null) {
-      if (dice !== 1 && dice !== 6) return false
-      return !hasOwnPawnOnDestination(activePlayer, pawn, dice)
-    }
-    if (hasOwnPawnBlockingPath(activePlayer, pawn, dice)) return false
-    return !hasOwnPawnOnDestination(activePlayer, pawn, dice)
+    return getStepOptionsForPawn(pawn, dice).some((steps) => evaluateMoveOption(activePlayer, pawn, steps).valid)
   }
 
   const rollDice = () => {
     if (rollingDice || !!eventDialog || pendingDice !== null || isAnimatingMove) return
     setRollingDice(true)
+    setPendingMoveTargets([])
     window.setTimeout(() => {
       const nextDice = Math.floor(Math.random() * 6) + 1
       setGameState((prev) => {
@@ -390,7 +464,7 @@ function App() {
     }, 480)
   }
 
-  const applyPawnMove = (pawnId: string) => {
+  const applyPawnMove = (pawnId: string, selectedSteps: number) => {
     if (pendingDice === null || rollingDice || !!eventDialog || isAnimatingMove) return
 
     const currentPlayer = gameState.players[gameState.currentPlayerIndex]
@@ -400,34 +474,39 @@ function App() {
     const isDeployMove = pawnToMove.position === null
     const canDeploy = pendingDice === 1 || pendingDice === 6
     if (isDeployMove && !canDeploy) return
-    if (hasOwnPawnBlockingPath(currentPlayer, pawnToMove, pendingDice)) {
+    if (!getStepOptionsForPawn(pawnToMove, pendingDice).includes(selectedSteps)) {
       setSnackbar({
-        message: 'Quan phia truoc dang chan duong di.',
+        message: 'Số bước di chuyển không hợp lệ.',
         tone: 'error',
       })
       return
     }
-    if (hasOwnPawnOnDestination(currentPlayer, pawnToMove, pendingDice)) {
+    const evaluatedMove = evaluateMoveOption(currentPlayer, pawnToMove, selectedSteps)
+    if (!evaluatedMove.valid) {
       setSnackbar({
-        message: 'O dich da co quan cua ban.',
+        message: evaluatedMove.reason ?? 'Nước đi không hợp lệ.',
         tone: 'error',
       })
       return
     }
 
     const rolledValue = pendingDice
-    const startIndex = pawnToMove.position ?? currentPlayer.startIndex
-    const travelPath = isDeployMove
-      ? [currentPlayer.startIndex]
-      : Array.from({ length: rolledValue }, (_, step) => (startIndex + step + 1) % trackPath.length)
-    const destinationIndex = travelPath[travelPath.length - 1]
+    const baseTravel = isDeployMove ? 0 : pawnToMove.travelSteps
+    const travelPath = Array.from({ length: selectedSteps }, (_, step) => {
+      const stepTravel = baseTravel + step + 1
+      return stepTravel <= trackPath.length ? (currentPlayer.startIndex + stepTravel) % trackPath.length : null
+    })
+    const destinationIndex = evaluatedMove.destinationIndex
+    const destinationGoalLaneIndex = evaluatedMove.destinationGoalLaneIndex
 
     setIsAnimatingMove(true)
     let frame = 0
 
     const playStep = () => {
       const nextIndex = travelPath[frame]
-      setAnimatedPawnPositions((prev) => ({ ...prev, [pawnId]: nextIndex }))
+      if (nextIndex !== null) {
+        setAnimatedPawnPositions((prev) => ({ ...prev, [pawnId]: nextIndex }))
+      }
       frame += 1
 
       if (frame < travelPath.length) {
@@ -452,37 +531,77 @@ function App() {
           const nextActive = { ...active }
           const nextPawns = [...nextActive.pawns]
           const originIndex = nextPawns[pawnIndex].position
-          nextPawns[pawnIndex] = { ...nextPawns[pawnIndex], position: destinationIndex, isActive: true }
+          const originTravelSteps = nextPawns[pawnIndex].travelSteps
+          const originGoalLaneIndex = nextPawns[pawnIndex].inGoalLaneIndex
+          nextPawns[pawnIndex] = {
+            ...nextPawns[pawnIndex],
+            level: isDeployMove ? nextActive.homeBase.level : nextPawns[pawnIndex].level,
+            position: destinationIndex,
+            travelSteps: evaluatedMove.targetTravel,
+            inGoalLaneIndex: destinationGoalLaneIndex,
+            isActive: true,
+          }
           nextActive.pawns = nextPawns
           nextPlayers[playerIndex] = nextActive
 
-          // One-cell rule + protection: capture enemy on destination unless shield blocks.
-          let moveBlockedByProtection = false
-          nextPlayers.forEach((player, idx) => {
-            if (idx === playerIndex) return
-            const updatedEnemyPawns = player.pawns.map((pawn) => {
-              if (pawn.position !== destinationIndex) return pawn
-              if (pawn.shieldTurns > 0) {
-                moveBlockedByProtection = true
-                return { ...pawn, shieldTurns: pawn.shieldTurns - 1 }
-              }
-              return { ...pawn, position: null, inGoalLaneIndex: null, isActive: false }
-            })
-            nextPlayers[idx] = { ...player, pawns: updatedEnemyPawns }
-          })
+          // One-cell rule + elimination condition:
+          // only capture when moved pawn level >= defender level and exact landing.
+          let moveBlocked = false
+          const defenderInfo = nextPlayers
+            .flatMap((player, idx) =>
+              idx === playerIndex
+                ? []
+                : player.pawns
+                    .filter((pawn) => destinationIndex !== null && pawn.position === destinationIndex)
+                    .map((pawn) => ({ player, idx, pawn })),
+            )
+            .at(0)
 
-          if (moveBlockedByProtection) {
-            nextPawns[pawnIndex] = { ...nextPawns[pawnIndex], position: originIndex, isActive: originIndex !== null }
-            nextActive.pawns = nextPawns
-            nextPlayers[playerIndex] = nextActive
-            setSnackbar({
-              message: 'Quan doi thu duoc bao ho, nuoc di bi chan.',
-              tone: 'error',
-            })
+          if (defenderInfo) {
+            if (defenderInfo.pawn.shieldTurns > 0) {
+              const updatedDefenderPawns = defenderInfo.player.pawns.map((pawn) =>
+                pawn.id === defenderInfo.pawn.id ? { ...pawn, shieldTurns: pawn.shieldTurns - 1 } : pawn,
+              )
+              nextPlayers[defenderInfo.idx] = { ...defenderInfo.player, pawns: updatedDefenderPawns }
+              moveBlocked = true
+              setSnackbar({
+                message: 'Quân đối thủ được bảo hộ, không thể đào thải.',
+                tone: 'error',
+              })
+            } else if (nextPawns[pawnIndex].level >= defenderInfo.pawn.level) {
+              const updatedDefenderPawns = defenderInfo.player.pawns.map((pawn) =>
+                pawn.id === defenderInfo.pawn.id
+                  ? { ...pawn, position: null, inGoalLaneIndex: null, isActive: false }
+                  : pawn,
+              )
+              nextPlayers[defenderInfo.idx] = { ...defenderInfo.player, pawns: updatedDefenderPawns }
+              setSnackbar({
+                message: 'Cạnh tranh đào thải thành công!',
+                tone: 'success',
+              })
+            } else {
+              moveBlocked = true
+              setSnackbar({
+                message: 'Không đủ cấp để đào thải quân đối thủ.',
+                tone: 'error',
+              })
+            }
           }
 
-          const tileType = getTileTypeByTrackIndex(destinationIndex)
-          if (!moveBlockedByProtection && (tileType === 'chance' || tileType === 'challenge')) {
+          if (moveBlocked) {
+            nextPawns[pawnIndex] = {
+              ...nextPawns[pawnIndex],
+              position: originIndex,
+              travelSteps: originTravelSteps,
+              inGoalLaneIndex: originGoalLaneIndex,
+              isActive: originIndex !== null || originGoalLaneIndex !== null,
+            }
+            nextActive.pawns = nextPawns
+            nextPlayers[playerIndex] = nextActive
+          }
+
+          const tileType = destinationIndex !== null ? getTileTypeByTrackIndex(destinationIndex) : 'normal'
+          if (!moveBlocked && destinationIndex !== null && (tileType === 'chance' || tileType === 'challenge')) {
             setHighlightedEventTile(destinationIndex)
             window.setTimeout(() => setHighlightedEventTile(null), 1800)
 
@@ -497,8 +616,8 @@ function App() {
                 nextPlayers[playerIndex] = { ...nextActive }
                 chanceText +=
                   upgradedLevel > currentLevel
-                    ? `Nha chinh tang len Lv.${upgradedLevel}.`
-                    : `Nha chinh da dat cap toi da Lv.${currentLevel}.`
+                    ? `Nhà chính tăng lên Lv.${upgradedLevel}.`
+                    : `Nhà chính đã đạt cấp tối đa Lv.${currentLevel}.`
               } else if (chanceCard.id === 'pawn-upgrade') {
                 const movedPawn = nextActive.pawns[pawnIndex]
                 const upgradedLevel = Math.min(4, movedPawn.level + 1) as PawnLevel
@@ -506,10 +625,10 @@ function App() {
                 nextPlayers[playerIndex] = { ...nextActive, pawns: [...nextActive.pawns] }
                 chanceText +=
                   upgradedLevel > movedPawn.level
-                    ? `${movedPawn.id} tang len Lv.${upgradedLevel}.`
-                    : `${movedPawn.id} da o cap toi da Lv.${movedPawn.level}.`
+                    ? `${movedPawn.id} tăng lên Lv.${upgradedLevel}.`
+                    : `${movedPawn.id} đã ở cấp tối đa Lv.${movedPawn.level}.`
               } else if (chanceCard.id === 'competition-win') {
-                let affectedText = 'Khong co muc tieu de ha cap.'
+                let affectedText = 'Không có mục tiêu để hạ cấp.'
                 for (let idx = 0; idx < nextPlayers.length; idx += 1) {
                   if (idx === playerIndex) continue
                   const enemy = nextPlayers[idx]
@@ -522,7 +641,7 @@ function App() {
                       const updatedPawns = [...enemy.pawns]
                       updatedPawns[strongestPawnIndex] = { ...targetPawn, shieldTurns: targetPawn.shieldTurns - 1 }
                       nextPlayers[idx] = { ...enemy, pawns: updatedPawns }
-                      affectedText = `${enemy.name} da chan ha cap bang the bao ho.`
+                      affectedText = `${enemy.name} đã chặn hạ cấp bằng thẻ bảo hộ.`
                     } else {
                       const updatedPawns = [...enemy.pawns]
                       updatedPawns[strongestPawnIndex] = {
@@ -530,7 +649,7 @@ function App() {
                         level: Math.max(1, targetPawn.level - 1) as PawnLevel,
                       }
                       nextPlayers[idx] = { ...enemy, pawns: updatedPawns }
-                      affectedText = `${enemy.name} bi ha cap ${targetPawn.id} xuong Lv.${updatedPawns[strongestPawnIndex].level}.`
+                      affectedText = `${enemy.name} bị hạ cấp ${targetPawn.id} xuống Lv.${updatedPawns[strongestPawnIndex].level}.`
                     }
                     enemyChanged = true
                   } else if (enemy.homeBase.level > 1) {
@@ -539,13 +658,13 @@ function App() {
                         ...enemy,
                         homeBase: { ...enemy.homeBase, shieldCharges: enemy.homeBase.shieldCharges - 1 },
                       }
-                      affectedText = `${enemy.name} da chan ha cap nha chinh bang the bao ho.`
+                      affectedText = `${enemy.name} đã chặn hạ cấp nhà chính bằng thẻ bảo hộ.`
                     } else {
                       nextPlayers[idx] = {
                         ...enemy,
                         homeBase: { ...enemy.homeBase, level: Math.max(1, enemy.homeBase.level - 1) as PawnLevel },
                       }
-                      affectedText = `${enemy.name} bi ha cap Nha chinh xuong Lv.${nextPlayers[idx].homeBase.level}.`
+                      affectedText = `${enemy.name} bị hạ cấp Nhà chính xuống Lv.${nextPlayers[idx].homeBase.level}.`
                     }
                     enemyChanged = true
                   }
@@ -558,26 +677,27 @@ function App() {
                 if (movedPawn.position !== null) {
                   nextActive.pawns[pawnIndex] = { ...movedPawn, shieldTurns: movedPawn.shieldTurns + 1 }
                   nextPlayers[playerIndex] = { ...nextActive, pawns: [...nextActive.pawns] }
-                  chanceText += `${movedPawn.id} nhan 1 the bao ho (1 lan).`
+                  chanceText += `${movedPawn.id} nhận 1 thẻ bảo hộ (1 lần).`
                 } else {
                   nextActive.homeBase = { ...nextActive.homeBase, shieldCharges: nextActive.homeBase.shieldCharges + 1 }
                   nextPlayers[playerIndex] = { ...nextActive }
-                  chanceText += 'Nha chinh nhan 1 the bao ho (1 lan).'
+                  chanceText += 'Nhà chính nhận 1 thẻ bảo hộ (1 lần).'
                 }
               } else if (chanceCard.id === 'fdi-capital') {
                 const spawnPawnIndex = nextActive.pawns.findIndex((pawn) => pawn.position === null)
                 if (spawnPawnIndex < 0) {
-                  chanceText += 'Khong con quan trong nha de ra them.'
+                  chanceText += 'Không còn quân trong nhà để ra thêm.'
                 } else {
                   const ownOccupyStart = nextActive.pawns.some(
                     (pawn, idx) => idx !== spawnPawnIndex && pawn.position === nextActive.startIndex,
                   )
                   if (ownOccupyStart) {
-                    chanceText += 'Diem xuat phat dang co quan cua ban, chua the ra them.'
+                    chanceText += 'Điểm xuất phát đang có quân của bạn, chưa thể ra thêm.'
                   } else {
                     const spawnedPawns = [...nextActive.pawns]
                     spawnedPawns[spawnPawnIndex] = {
                       ...spawnedPawns[spawnPawnIndex],
+                      level: nextActive.homeBase.level,
                       position: nextActive.startIndex,
                       isActive: true,
                     }
@@ -595,7 +715,7 @@ function App() {
                       })
                       nextPlayers[idx] = { ...enemy, pawns: adjustedEnemyPawns }
                     })
-                    chanceText += `${spawnedPawns[spawnPawnIndex].id} da duoc ra quan ngay.`
+                    chanceText += `${spawnedPawns[spawnPawnIndex].id} đã được ra quân ngay.`
                   }
                 }
               }
@@ -631,6 +751,7 @@ function App() {
         })
 
         setPendingDice(null)
+        setPendingMoveTargets([])
         setIsAnimatingMove(false)
       }, 130)
     }
@@ -644,25 +765,30 @@ function App() {
     setSelectedPawnByPlayer((prev) => ({ ...prev, [player.id]: pawn.id }))
 
     if (pendingDice !== null) {
-      if (canPawnActWithDice(pawn, pendingDice)) {
-        applyPawnMove(pawn.id)
+      setPendingMoveTargets([])
+      const validTargets = getStepOptionsForPawn(pawn, pendingDice)
+        .map((steps) => {
+          const evaluated = evaluateMoveOption(player, pawn, steps)
+          if (!evaluated.valid) return null
+          return {
+            pawnId: pawn.id,
+            steps,
+            destinationIndex: evaluated.destinationIndex,
+            destinationGoalLaneIndex: evaluated.destinationGoalLaneIndex,
+          }
+        })
+        .filter((item): item is MoveTarget => item !== null)
+
+      if (validTargets.length > 0) {
+        setPendingMoveTargets(validTargets)
+      } else {
+        setPendingMoveTargets([])
+        setSnackbar({
+          message: 'Quân này không có ô đích hợp lệ.',
+          tone: 'error',
+        })
       }
     }
-  }
-
-  const resetGame = () => {
-    setGameState(createInitialState())
-    setSelectedPawnByPlayer(Object.fromEntries(PLAYER_PRESETS.map((preset) => [preset.id, `${preset.id}-H1`])))
-    setRollingDice(false)
-    setPendingDice(null)
-    setIsAnimatingMove(false)
-    setAnimatedPawnPositions({})
-    setHighlightedEventTile(null)
-    setEventDialog(null)
-    setChallengeChoice(null)
-    setChallengeSubmitted(false)
-    setChallengeTimeLeft(CHALLENGE_TIME_LIMIT)
-    setSnackbar(null)
   }
 
   return (
@@ -673,13 +799,13 @@ function App() {
             <img src="/favicon.png" alt="Ludo logo" className="h-10 w-10 rounded-lg object-cover" />
             <h1 className="text-2xl font-bold">Cờ Cá Ngựa 4.0</h1>
           </div>
-          <p className="mt-1 text-sm text-slate-300">Đang chạy chế độ chơi nhanh: bỏ qua phòng và slot.</p>
+          <p className="mt-1 text-sm text-slate-300">Đang chạy chế độ chơi nhanh: bỏ qua phòng và vị trí chờ.</p>
 
           <div className="mt-5 space-y-3 rounded-xl bg-slate-700/60 p-4">
             <p className="text-sm">
               Lượt hiện tại: <span className="font-semibold">{activePlayer.name}</span>
             </p>
-            <p className="text-sm">Turn: {gameState.turn}</p>
+            <p className="text-sm">Vòng: {gameState.turn}</p>
             <div className="flex items-center gap-3 rounded-lg bg-slate-800/80 p-2">
               <Dice value={gameState.diceValue} rolling={rollingDice} />
               <div>
@@ -689,7 +815,8 @@ function App() {
             </div>
             {pendingDice !== null && (
               <p className="rounded-lg border border-indigo-400/50 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
-                Đã ra <span className="font-semibold">{pendingDice}</span>. Chọn quân để đi (ra quân cần 1 hoặc 6).
+                Đã ra <span className="font-semibold">{pendingDice}</span>. Chọn quân, sau đó chọn ô đích sáng trên bàn cờ
+                (ra quân cần 1 hoặc 6; quân cấp cao có thể đi theo bội số cấp).
               </p>
             )}
             <button
@@ -697,13 +824,7 @@ function App() {
               disabled={rollingDice || !!eventDialog || pendingDice !== null || isAnimatingMove}
               className="mt-2 w-full rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-indigo-700"
             >
-              {rollingDice ? 'Dang tung...' : 'Tung xuc xac'}
-            </button>
-            <button
-              onClick={resetGame}
-              className="mt-2 w-full rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-500"
-            >
-              Khởi tạo lại ván
+              {rollingDice ? 'Đang tung...' : 'Tung xúc xắc'}
             </button>
           </div>
 
@@ -714,7 +835,7 @@ function App() {
                   <p className="font-semibold" style={{ color: player.color }}>
                     {player.name}
                   </p>
-                  <span className="text-xs">Home Lv.{player.homeBase.level}</span>
+                  <span className="text-xs">Nhà chính Lv.{player.homeBase.level}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {player.pawns.map((pawn) => (
@@ -754,7 +875,9 @@ function App() {
                   ))}
                 </div>
                 {player.id === activePlayer.id && pendingDice !== null && (
-                  <p className="mt-2 text-[11px] text-slate-300">Bấm trực tiếp vào quân cờ để xuất quân/di chuyển.</p>
+                  <p className="mt-2 text-[11px] text-slate-300">
+                    Bấm trực tiếp vào quân cờ để hiển thị các ô đích hợp lệ, sau đó bấm ô đích để di chuyển.
+                  </p>
                 )}
               </div>
             ))}
@@ -774,6 +897,27 @@ function App() {
               const row = Math.floor(i / BOARD_SIZE)
               const col = i % BOARD_SIZE
               const trackInfo = trackMap.get(`${row}-${col}`)
+              const goalLaneCell = gameState.players
+                .map((player) => ({
+                  player,
+                  laneIndex: (() => {
+                    for (let idx = 0; idx < 6; idx += 1) {
+                      const coord = getGoalLaneCoord(player.id, idx)
+                      if (coord && coord.row === row && coord.col === col) return idx
+                    }
+                    return null
+                  })(),
+                }))
+                .find((item) => item.laneIndex !== null)
+              const moveTarget = trackInfo
+                ? pendingMoveTargets.find((target) => target.destinationIndex === trackInfo.index)
+                : goalLaneCell
+                  ? pendingMoveTargets.find(
+                      (target) =>
+                        target.destinationGoalLaneIndex === goalLaneCell.laneIndex &&
+                        target.pawnId.startsWith(`${goalLaneCell.player.id}-`),
+                    )
+                  : undefined
               const goalClass = getGoalLaneClass(row, col)
               const baseClass = getBaseCellClass(row, col)
               const isInRedBase = row <= 5 && col <= 5
@@ -801,6 +945,9 @@ function App() {
                 if (trackInfo.index === highlightedEventTile && trackInfo.type === 'challenge') {
                   className += ' tile-event-challenge'
                 }
+                if (moveTarget) {
+                  className += ' tile-move-target'
+                }
               } else if (goalClass) {
                 className += ` ${goalClass}`
               } else {
@@ -827,6 +974,10 @@ function App() {
                         .filter((pawn) => (animatedPawnPositions[pawn.id] ?? pawn.position) === trackInfo.index)
                         .map((pawn) => pawn.id),
                     )
+                  : goalLaneCell
+                    ? goalLaneCell.player.pawns
+                        .filter((pawn) => pawn.inGoalLaneIndex === goalLaneCell.laneIndex)
+                        .map((pawn) => pawn.id)
                   : []
               const topPawnId = pawnsOnCell[pawnsOnCell.length - 1]
 
@@ -851,26 +1002,34 @@ function App() {
                   {isActivePlayerBase && (
                     <span className="pointer-events-none absolute inset-0 bg-white/8" />
                   )}
-                  {trackInfo ? (
+                  {trackInfo || goalLaneCell ? (
                     <>
-                      <span className={`absolute left-1 top-0.5 ${startOwner ? startCellTextClass : ''}`}>
-                        {trackInfo.index + 1}
-                      </span>
-                      {(trackInfo.type === 'chance' || trackInfo.type === 'challenge') && (
-                        <span
-                          className={`absolute right-1 top-0.5 rounded px-0.5 text-[9px] font-bold ${
-                            trackInfo.type === 'chance'
-                              ? 'bg-cyan-500/30 text-cyan-100'
-                              : 'bg-fuchsia-500/30 text-fuchsia-100'
-                          } ${startOwner ? startCellTextClass : ''}`}
-                        >
-                          {trackInfo.type === 'chance' ? 'CH' : 'TH'}
-                        </span>
-                      )}
-                      {gameState.players.some((player) => player.startIndex === trackInfo.index) && (
-                        <span className={`absolute bottom-0.5 right-1 text-[9px] font-bold ${startOwner ? startCellTextClass : ''}`}>
-                          S
-                        </span>
+                      {trackInfo && (
+                        <>
+                          <span className={`absolute left-1 top-0.5 ${startOwner ? startCellTextClass : ''}`}>
+                            {trackInfo.index + 1}
+                          </span>
+                          {(trackInfo.type === 'chance' || trackInfo.type === 'challenge') && (
+                            <span
+                              className={`absolute right-1 top-0.5 rounded px-0.5 text-[9px] font-bold ${
+                                trackInfo.type === 'chance'
+                                  ? 'bg-cyan-500/30 text-cyan-100'
+                                  : 'bg-fuchsia-500/30 text-fuchsia-100'
+                              } ${startOwner ? startCellTextClass : ''}`}
+                            >
+                              {trackInfo.type === 'chance' ? 'CH' : 'TH'}
+                            </span>
+                          )}
+                          {gameState.players.some((player) => player.startIndex === trackInfo.index) && (
+                            <span
+                              className={`absolute bottom-0.5 right-1 text-[9px] font-bold ${
+                                startOwner ? startCellTextClass : ''
+                              }`}
+                            >
+                              S
+                            </span>
+                          )}
+                        </>
                       )}
                       {topPawnId && (
                         <button
@@ -911,6 +1070,14 @@ function App() {
                             }}
                           />
                         </button>
+                      )}
+                      {moveTarget && (
+                        <button
+                          type="button"
+                          onClick={() => applyPawnMove(moveTarget.pawnId, moveTarget.steps)}
+                          className="absolute inset-0 z-20 cursor-pointer"
+                          aria-label={`Di chuyển ${moveTarget.steps} bước`}
+                        />
                       )}
                       {pawnsOnCell.length > 1 && (
                         <span className="absolute bottom-0.5 left-1 rounded bg-slate-950/75 px-1 text-[9px] font-semibold text-white">
@@ -962,8 +1129,17 @@ function App() {
 
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-300">
             <span className="rounded bg-slate-700 px-2 py-1">Ô thường</span>
-            <span className="tile-chance rounded px-2 py-1 text-cyan-100">Chance</span>
-            <span className="tile-challenge rounded px-2 py-1 text-fuchsia-100">Challenge</span>
+            <span className="tile-chance rounded px-2 py-1 text-cyan-100">Cơ hội</span>
+            <span className="tile-challenge rounded px-2 py-1 text-fuchsia-100">Thách thức</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-200">
+            <span className="text-slate-400">Level quân cờ:</span>
+            {([1, 2, 3, 4] as const).map((level) => (
+              <span key={level} className="flex items-center gap-1 rounded bg-slate-700/70 px-2 py-1">
+                <img src={pawnIconByLevel[level]} alt={`Level ${level}`} className="h-4 w-4 rounded-sm object-cover" />
+                Lv.{level}
+              </span>
+            ))}
           </div>
         </section>
       </div>
@@ -973,13 +1149,13 @@ function App() {
           <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">Su kien o dac biet</p>
+                <p className="text-xs uppercase tracking-wide text-slate-400">Sự kiện ô đặc biệt</p>
                 <h2
                   className={`mt-1 text-2xl font-bold ${
                     eventDialog.type === 'chance' ? 'text-emerald-300' : 'text-amber-300'
                   }`}
                 >
-                  {eventDialog.type === 'chance' ? 'CO HOI' : 'THACH THUC'}
+                  {eventDialog.type === 'chance' ? 'CƠ HỘI' : 'THÁCH THỨC'}
                 </h2>
               </div>
               <span
@@ -994,9 +1170,9 @@ function App() {
             </div>
 
             <p className="mt-3 text-sm text-slate-200">
-              <span className="font-semibold">{eventDialog.playerName}</span> vua di vao o{' '}
+              <span className="font-semibold">{eventDialog.playerName}</span> vừa đi vào ô{' '}
               <span className={eventDialog.type === 'chance' ? 'text-emerald-300' : 'text-amber-300'}>
-                {eventDialog.type === 'chance' ? 'Co hoi' : 'Thach thuc'}
+                {eventDialog.type === 'chance' ? 'Cơ hội' : 'Thách thức'}
               </span>
               .
             </p>
@@ -1012,10 +1188,10 @@ function App() {
                   return (
                     <>
                 <p className="rounded-lg bg-slate-900/50 px-3 py-2 text-xs text-amber-100">
-                  Thoi gian con lai: <span className="font-bold">{challengeTimeLeft}s</span>
+                  Thời gian còn lại: <span className="font-bold">{challengeTimeLeft}s</span>
                 </p>
                 <p className="font-semibold">
-                  Cau {challenge.id}: {challenge.question}
+                  Câu {challenge.id}: {challenge.question}
                 </p>
                 {(['A', 'B', 'C', 'D'] as const).map((choice) => {
                   const isPicked = challengeChoice === choice
@@ -1052,8 +1228,8 @@ function App() {
                       const isCorrect = challengeChoice === challenge.answer
                       setSnackbar({
                         message: isCorrect
-                          ? 'Chuc mung! Ban duoc tung xuc xac tiep.'
-                          : `Chia buon! Sai dap an, dap an dung la ${challenge.answer}.`,
+                          ? 'Chúc mừng! Bạn được tung xúc xắc tiếp.'
+                          : `Chia buồn! Sai đáp án, đáp án đúng là ${challenge.answer}.`,
                         tone: isCorrect ? 'success' : 'error',
                       })
                       setEventDialog(null)
@@ -1065,10 +1241,10 @@ function App() {
                     disabled={!challengeChoice}
                     className="mt-1 w-full rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-slate-600"
                   >
-                    Xac nhan dap an
+                    Xác nhận đáp án
                   </button>
                 ) : (
-                  <p className="rounded-lg bg-slate-800/80 px-3 py-2 text-sm">Dang xu ly ket qua...</p>
+                  <p className="rounded-lg bg-slate-800/80 px-3 py-2 text-sm">Đang xử lý kết quả...</p>
                 )}
                     </>
                   )
@@ -1076,7 +1252,7 @@ function App() {
               </div>
             ) : (
               <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
-                Chua co noi dung thach thuc.
+                Chưa có nội dung thách thức.
               </p>
             )}
 
@@ -1089,7 +1265,7 @@ function App() {
                 }}
                 className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
               >
-                Dong
+                Đóng
               </button>
             )}
           </div>

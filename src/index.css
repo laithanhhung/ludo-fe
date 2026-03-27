@@ -13,6 +13,13 @@ body {
   animation: tile-challenge-glow 900ms ease-in-out infinite alternate;
 }
 
+.tile-move-target {
+  box-shadow:
+    inset 0 0 0 2px rgba(96, 165, 250, 0.95),
+    0 0 14px rgba(59, 130, 246, 0.65);
+  background-image: radial-gradient(rgba(147, 197, 253, 0.24), transparent 60%);
+}
+
 .tile-chance {
   background:
     linear-gradient(135deg, rgba(6, 182, 212, 0.28), rgba(14, 116, 144, 0.35)),
